@@ -1,0 +1,32 @@
+{
+  "name": "job-board-api",
+  "version": "1.0.0",
+  "description": "An API for a job posting app built with NodeJS, ExpressJS and MongooseJS.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@git.generalassemb.ly:jmeade11/mern-auth-tutorial.git"
+  },
+  "keywords": [
+    "expressjs",
+    "mongoose",
+    "mongodb",
+    "nodejs"
+  ],
+  "author": "Jennifer Meade https://jennifermeade.dev/",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "mongoose": "^5.9.1"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.2"
+  }
+}
