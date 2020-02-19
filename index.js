@@ -9,6 +9,9 @@ const {
   handleValidationErrors
 } = require('./middleware/custom_errors');
 
+// Require the user resource routes and controllers
+const userController = require('./controllers/users');
+
 // Require the job resource routes and controllers
 const jobController = require('./controllers/jobs');
 
@@ -31,6 +34,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Configure the route middleware
+app.use('/api', userController);
 app.use('/api/jobs', jobController);
 
 // The catch all for handling database and Mongoose
