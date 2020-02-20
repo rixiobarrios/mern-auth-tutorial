@@ -1,5 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
+const { createUserToken } = require('../middleware/auth');
+
 const User = require('../db/models/user_model');
 
 const router = express.Router();
@@ -31,7 +33,12 @@ router.post('/signup', (req, res, next) => {
 
 // SIGN IN
 // POST /api/signin
-router.post('/signin', (req, res, next) => {});
+router.post('/signin', (req, res, next) => {
+  User.findOne({ email: req.body.email })
+    .then(user => createUserToken(req, user))
+    .then(token => res.json({ token }))
+    .catch(next);
+});
 
 // SIGN OUT
 // DELETE /api/signout
