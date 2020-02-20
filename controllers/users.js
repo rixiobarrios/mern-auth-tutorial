@@ -42,6 +42,8 @@ router.post('/signin', (req, res, next) => {
 
 // SIGN OUT
 // DELETE /api/signout
-router.post('/signout', (req, res, next) => {});
+router.post('/signout', (req, res, next) => {
+  req.json({ token: '' });
+});
 
 module.exports = router;
