@@ -2,7 +2,7 @@
 
 # Express API & Authentication
 
-Through this tutorial, we'll build an Express API as the back end to a job board application where users can post job openings. In order for the job seekers to be able to see and potentially apply to the jobs, this needs to be an ‘open readʼ model with the ability for all users to see (i.e., read) the jobs. However, it wouldn't make sense if a job seeker could edit or delete jobs, so we'll add ownership to the job model and make sure that only the user who created the job can update or delete it. In order to determine which users are authorized to modify which job documents, we need a user model and a system for authenication.
+Throughout this tutorial, we'll build an Express API as the back end to a job board application where users can post job openings. In order for the job seekers to be able to see and potentially apply to the jobs, this needs to be an ‘open readʼ model with the ability for all users to see (i.e., read) the jobs. However, it wouldn't make sense if a job seeker could edit or delete jobs, so we'll add ownership to the job model and make sure that only the user who created the job can update or delete it. In order to determine which users are authorized to modify which job documents, we need a user model and a system for authenication.
 
 We'll start by creating the Job resource. Then we'll add a User resource and connect the two using Mongoose relationships. Finally, we'll use Passport middleware to add authentication.
 
@@ -235,7 +235,7 @@ app.listen(4000, () => {
 
 2. Use the `dev` script we wrote earlier in the `package.json` file to run the server. In the Terminal, type `npm run dev`.
 1. This server doesn't do anything at all, so lets build it out a bit more. We know we'll be adding our routes in here so let's require `mongoose` and while we're at it require the `cors` middleware.
-1. Now, anywhere after you instatiated Express (after the `app` variable), add the cors middleware. Remember to use a middleware in Express we need to pass it to the `app.use()` method.
+1. Now, anywhere after you instatiated Express (after the `app` variable), add the cors middleware. Remember, to use a middleware in Express we need to pass it to the `app.use()` method.
 1. We're also going to have to use two of the builtin middleware packages since we're going to be making requests via AJAX to the server, so add `app.use(express.json())` and `app.use(express.urlencoded({ extended: true }))`.
 1. Lastly, again, we know that eventually we'll be running this on a remote server, so lets create a port variable. We can assign the variable the value of the PORT environment variable that will be set in Heroku OR if that environment variable doesn't exist, it should use 4000.
 
@@ -273,6 +273,8 @@ app.listen(port, () => {
   console.log('listening on port ' + port);
 });
 ```
+
+> :rotating_light: NOTE: If you've previously used the body-parser middleware, you no longer need to do that! Express bundled this middleware into the base package in v4.16.0 (Oct 2017). Using [`express.json`](https://expressjs.com/en/4x/api.html#express.json) is the equivalent of bodyParser.json() and [express.urlencoded()](https://expressjs.com/en/4x/api.html#express.urlencoded) is the same as the body-parser package's method with the same name.
 
 Provided that your server is still listening on port 4000, you're ready to move on to creating some routes. We'll get back to this file in a few minutes.
 
@@ -387,15 +389,17 @@ app.use('/api/jobs', jobController);
 
 3. Make sure your server is running and test all of the routes in Postman.
 
-If you were able to CRUD in Postman, :clap: ... but we've still got some work to do so no :champagne: :clinking_glasses: yet. Go ahead and add and commit up to this milestone.
+If you were able to CRUD in Postman, congrats to you! :clap: ... but we've still got some work to do so no :champagne: :clinking_glasses: yet. Go ahead and add and commit up to this milestone.
 
 [View Commit](../../commit/7beb658)
 
 ### HTTP Status Codes
 
-Our Express API is coming along, but before we add our User model, we need to fix some things. So far, we're kind of breaking a lot of rules when it comes to the HTTP request-response cycle. First, we're not responding to all requests &mdash; only the ones that we can handle flawlessly. We're not handling any of the error cases. ExpressJS will help us out with some errors by sending a generic 500 server error, but if Mongoose throws an error, we're on our own. The second issue is that we're not setting the status codes on our responses, so every response is the default 200 OK. It turns out it's really easy to change the status codes within Express APIs.
+Our Express API is coming along, but before we add our User model, we need to fix some things. So far, we're kind of breaking a lot of rules when it comes to the HTTP request-response cycle. For one, we're not responding to **all** requests &mdash; only the ones that execute flawlessly. We're not handling any of the error cases. ExpressJS will help us out with some errors by sending a generic 500 server error, but in many cases, we're on our own and the system is simply left to hang :frowning:.
 
-1. Open the `controllers/jobs.js` file, we'll start by fixing the status codes for the post and delete routes.
+Another issue is that we're not setting the status codes on our responses, so every successful response is the default `200 OK`. Setting acurate status codes is not simply prescribed by REST architecture best practices. [HTTP response status codes](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status) are part of the rules defined by HTTP that govern the Web! Plus, it turns out that it's really easy to change the status codes within Express APIs, so letʼs do that:
+
+1. Open the `controllers/jobs.js` file.
 1. In the post route, all we need to do is add `.status(201)` before we call the `.json()` method on the response object.
 1. For the delete route, we'll change things a bit. Although you _can_ return `200 OK` in response to a delete operation, it's more customary to return `204 No Content`, so we'll do that by changing the response to: `.then(() => res.sendStatus(204))`. Notice here that we can't use the `.status()` method that we used for the post route. This is because it doesn't actually send the response. In the post route, the `.json()` method is responsible for sending the response. Since we aren't sending any ‘contentʼ this time, there's no `.json()` method to do the job. The `.sendStatus()` method is different from just `.status()` in that it both sets the status and sends the response.
 
@@ -437,7 +441,7 @@ This will _sort of_ work. As long as the id we provide looks like a Mongo id, we
 
 Pretty much everything in Express is a form of middleware. Whenever a request is recieved by the server, each piece of middleware is called in the order that it is _used_ in our index file (i.e., where it is invoked with `app.use()`). Each middleware is passed the request and the response objects from Express as arguments along with a third argument that is commonly referred to as `next`. So, any middleware can use the values in the request object or even send a response back to the client. More often than not though, middleware will simply do _‘something’_ and then pass the request on to the next piece of middleware in the chain until it reaches one of our controllers where we are explicitly handling the response.
 
-It turns out that our controllers are also a form of middleware, meaning that they too can be passed a `next` argument. This is helpful to handle errors that occur. Let's change all of our controllers to include a third parameter called `next` and then we'll use a promise `.catch()` method and pass it `next` as it argument. With this change, our controllers will now look like this:
+It turns out that our controllers are also a form of middleware, meaning that they too can be passed a `next` argument. This is helpful to handle errors that occur. Let’s change all of our controllers to include a third parameter called `next` and then we'll use a promise `.catch()` method and pass it `next` as it argument. With this change, our controllers will now look like this:
 
 ```js
 // INDEX
@@ -540,7 +544,7 @@ app.use((err, req, res, next) => {
 
 Try making a GET request to `http://localhost:4000/api/jobs/123` from Postman or the browser again and you'll see that we are no longer sending along the details of the error to the client! :tada:.
 
-Any time an error is thrown in a promise chain, it will be handled by the `.catch()` method which invokes `next` callback and passes it the error as an argument. When `next` is called with any value, [Express automatically treats this as an error](https://expressjs.com/en/guide/error-handling.html) and sends it to our middleware above. If the error is thrown _outside_ a promise chain, it also automatically gets sent to the middleware above simply because it's an error.
+Any time an error is thrown in a promise chain, it will be handled by the `.catch()` method which invokes the `next` callback and passes it the error as an argument. When `next` is called with any value, [Express automatically treats the argument it is passed as an error](https://expressjs.com/en/guide/error-handling.html) and sends it to our middleware above. If the error is thrown _outside_ a promise chain, it also automatically gets sent to the middleware above simply because it's an error.
 
 We can take advantage of this by creating some custom errors that we can throw when we want to control exactly what is sent back to the client!
 
@@ -604,7 +608,7 @@ class InvalidIdError extends Error {
 }
 ```
 
-4. Now we'll write some functions that we can export and use elsewhere in our code to handle the errors described above. We're also including the generic middleware function that we added to the `index.js` file and moving it here. This will keep all of our error handling code in one place and make our `index.js` file a little easier to read. After the custom error classes in the `custom_errors.js` file, add the following methods and export them so we can use them in our controllers:
+4. Now we'll write some functions that we can export and use elsewhere in our code to handle the errors described above. We’ll also move the generic middleware function that we added to the `index.js` file into our new `custom_errors.js` file. This will keep all of our error handling code in one place and make our `index.js` file a little easier to read. After the custom error classes in the `custom_errors.js` file, add the following methods and export them so we can use them in our controllers:
 
 ```js
 const handleValidateOwnership = (requestObject, resource) => {
@@ -676,7 +680,7 @@ const { handleErrors } = require('./middleware/custom_errors');
 app.use(handleErrors);
 ```
 
-6. We can use the `handleValidationErrors` method in the `index.js`. Add `handleValidationErrors` to the destructured require statement and include `app.use(handleValidationErrors)` directly **before** the `handleErrors`. This method will catch any Mongoose errors that occur when data is validated against a schema before it is added to the database as well as generic MongoDB errors so it needs to run after all of our controllers.
+6. We can use the `handleValidationErrors` method in the `index.js`. Add `handleValidationErrors` to the destructured require statement and include `app.use(handleValidationErrors)` directly **before** the `handleErrors`. This method will catch any Mongoose errors that occur when data is validated against a schema before it is added to the database, as well as generic MongoDB errors, so it needs to run after all of our controllers.
 
 ```js
 // Require the error handlers
@@ -690,7 +694,7 @@ app.use(handleValidationErrors);
 app.use(handleErrors);
 ```
 
-7. Next, in the `controllers/jobs.js` file, require `handleValidId` method. This method will verify whether an id is a valid MongoDB id, **before** we try and use it to find a document so that we can prevent those `CastErrors` from happening (like when we tried to use the id "123"). That means we need this middleware to run **only** on routes that use ids (i.e., edit, delete and show) and we need it to run before the controller is passed the request. This is actually pretty easy in Express because we can add as many middleware methods we want to our route before the controller! Update the file as follows:
+7. Next, in the `controllers/jobs.js` file, require `handleValidId` method. This method will verify whether an id is a valid MongoDB id, **before** we try and use it to find a document so that we can prevent those `CastErrors` from happening (such as when we tried to use the id "123"). That means we need this middleware to run **only** on routes that use ids (i.e., edit, delete and show) and we need it to run before the controller is passed the request. This is actually pretty easy in Express because we can add as many middleware methods we want to our route before the controller! Update the file as follows:
 
 ```js
 // Require handleValidateId by destructuring it from the exports object
@@ -791,7 +795,7 @@ Excellent! We're done with error handling for now. Test, then git add and git co
 
 ## Add a User Resource
 
-We've got all of the boilerplate in place, so adding a user resource will go quickly. For authentication purposes, we'll be adding some non-RESTful routes related to our user resource. Initially, we'll just focus on a `api/signup/` route that will be a POST route for creating a new user.
+We've got all of the boilerplate in place, so adding a user resource will go quickly. For authentication purposes, we'll be adding some non-RESTful routes related to our user resource. Initially, we'll just focus on creating a `/signup` route that will be a POST route for creating a new user.
 
 ### Create the User Model
 
@@ -824,7 +828,7 @@ module.exports = mongoose.model('User', userSchema);
 ### Create Routes for the User Resource
 
 1. Create a new file in the `controllers` directory called `users.js`.
-1. Require express, the user model and create a router and export it:
+1. Require express, the user model, and create a router and export it:
 
 ```js
 const express = require('express');
@@ -884,7 +888,7 @@ Test in Postman by creating a new user.
 
 ### Prevent Passwords from Being Sent to Clients
 
-You may have noticed that when you created a new user, you got back a user document with the user's password. That's a huge security hole in our API right now. We can fix it using Mongoose [Virtuals](https://mongoosejs.com/docs/tutorials/virtuals.html) pretty easily though. Virtuals are used to transform data without persisting the transformation in MongoDB. We'll create a virtual that will automatically remove the password field any time we use a toJSON method (including `JSON.stringify()`, Mongoose's `.toJSON()` method or Express' `.json()` method). The field is deleted by virtual, but remains safe and sound in our database.
+You may have noticed that when you created a new user, you got back a user document with the user's password. That's a huge security hole in our API right now. We can fix it using Mongoose [Virtuals](https://mongoosejs.com/docs/tutorials/virtuals.html) pretty easily though. Virtuals are used to transform data without persisting the transformation in MongoDB. We'll create a virtual that will automatically remove the password field any time we use a toJSON method (including `JSON.stringify()`, Mongoose's `.toJSON()` method or Express' `.json()` method). Even though the field is being deleted by the virtual, it remains safe and sound in our database.
 
 1. Open the `models/user_model.js` file.
 1. Update the schema as follows to add a virtual:
@@ -916,13 +920,19 @@ const userSchema = new mongoose.Schema(
 );
 ```
 
-Create a new user in Postman. :tada: No more password being sent! However, it seems we introduced another issue. Now, we have both an `_id` and an `id` field. Technically, this additional `id` field is just a virtual because we used a toJSON virtual. You can verify that it's not storing the value in MongoDB separately. If it bugs you, you can add `id: false` as a key/value pair in the options object that has the `timestamps` and `toJSON` properties.
+Create a new user in Postman. :tada: No more password being sent! However, it seems we introduced another issue. Now, we have both an `_id` and an `id` field. Technically, this additional `id` field is just a virtual because we used a toJSON virtual. You can verify that itʼs not storing the value in MongoDB separately. If it bugs you, you can add `id: false` as a key/value pair in the options object that has the `timestamps` and `toJSON` properties.
 
 ### Store a Hashed Password
 
 We're breaking a cardinal rule of user security by saving the user's password in plain text. Even in a-just-for-fun, non-commercial app, we're opening ourselves up to financial liability and risking the security of users who often reuse the same password on multiple sites. So lets fix that, shall we?
 
-When it comes to storing password data securely, the only thing we can do is not store it at all. Wait...whaaat? Yes, we should _never store a password_ &mdash; not even an encrypted password. Instead we should store a hash of the password. Hashing is a **one-way function**, so the hashed value cannot be reversed to obtain the original input value. If you apply the same hashing algorithm to the same value you'll always get the same hash though. That means we can store the hash of the password and when users sign into the system, we can hash the password they send and compare it with the hash in the database to verify that they provided the correct password.
+When it comes to storing password data securely, the only thing we can do is not store it at all.
+
+> _Wait...whaaat?_
+>
+> **We should _never store a password_ &mdash; not even an encrypted password.**
+
+Instead we should store a hash of the password. Hashing is a **one-way function**, so the hashed value cannot be reversed to obtain the original input value. If you apply the same hashing algorithm to the same value you'll always get the same hash though. That means we can store the hash of the password and when users sign into the system, we can hash the password they send and compare it with the hash in the database to verify that they provided the correct password.
 
 1. We'll use a popular npm package called `bcrypt` to hash our passwords, so in the Terminal run `npm i bcrypt`. :warning: **Do not run this install from VS Code's integrated terminal**.
 1. Require the `bcrypt` package in your `controllers/users.js` file with `const bcrypt = require('bcrypt');`.
@@ -987,10 +997,10 @@ If your passwords are hashed, add and commit your changes. Next, we'll add the u
 
 ## Add Users to Jobs
 
-Now we're going to create a one-to-many relationship between our users and jobs. In Mongoose, we can do this with _child referencing_ or _parent referencing_, but the preferred approach for one-to-many is through **parent referencing**. This means that we'll add the parent document id to each of the child documents. This keeps our data flat and helps to prevent inconsistencies.
+Now we're going to create a one-to-many relationship between our users and jobs. In Mongoose, we can do this with _child referencing_ or _parent referencing_, but the preferred approach for one-to-many relationships is through **parent referencing**. This means that weʼll add the parent document’s id to each of the child documents. This keeps our data flat and helps to prevent inconsistencies.
 
 1. Open the `db/models/job_model.js` file.
-1. After the description property in the schema add an owner field. Set its type to a Mongoose object id, reference the User model and make it required:
+1. After the description property in the schema, add an owner field. Set its type to a Mongoose object id, reference the User model, and make it required:
 
 ```js
 {
@@ -1043,17 +1053,19 @@ Awesome progress... we're ready to add in authentication (finally :sweat_smile:)
 
 ## Add Authentication
 
-In this part of the tutorial, we'll be tackling the steps needed to add authentication to our app. We'll be using [Passport](http://www.passportjs.org/) to simplify the authentication process. To use Passport, we need to install it in our app along with one (or more) of the over [500 strategies](http://www.passportjs.org/packages/) it offers for authentication. For this tutorial, we'll be using what's know as the **jwt-passport** strategy. [JWT](https://jwt.io/introduction/) stands for JSON Web Token, and it's an open standard that is a popular choice for authorizing users.
+In this part of the tutorial, we'll be tackling the steps needed to add authentication to our app. We'll be using [Passport](http://www.passportjs.org/) to simplify the authentication process. To use Passport, we need to install it in our app along with one (or more) of the over [500 strategies](http://www.passportjs.org/packages/) it offers for authentication. For this tutorial, we'll be employing a strategy which uses JSON Web Tokens ([JWT](https://jwt.io/introduction/)).
 
-Each strategy with Passport has to be configured for your specific app. Basically, Passport gives us a callback and we fill it in with any logic needed to get the user from our database that matches some bit of data that Passport extracts from a request. We just get the user and turn it back over the Passport, which in turn will add it to the request and then pass it on to the route that called it.
-
-For the JWT strategy that we're going to use, Passport will do all of the complicated stuff around extracting the token from the request and decrypting it into a plain old JavaScript object. The token will contain the id of the user, which we'll use to find the user in our database.
+JWT is an open standard and an excellent choice for modern applications based on REST architectures. The fundamental premise of the REST architectural style is that the **server does not store any state** about the client session on the server side, hence the name Representational **State Transfer**. In REST, every HTTP request happens in complete isolation. It is up to the client to send (i.e., transfer) whatever state is needed to carry out the request. JWT provides a lightweight approach to transferring state from the client to the server in a secure fashion. While server-based sessions donʼt necessarily have to violate the constraints of REST, they are costly in terms of server resources and they simply don't scale well.
 
 ### Configure Passport
 
+Each Passport strategy has to be configured for your specific app. Basically, Passport gives us a callback and we fill it in with any logic needed to get the user from our database that matches some bit of data that Passport extracts from a request. After configuring the strategy with the code to retrieve the user from the database, we register the strategy, and initialize Passport.
+
+Once initialized, weʼll run the passport strategy that we configured and registered as route middleware. When run as middleware, Passport receives the request, extracts and decrypts the user’s token, adds it to the request object and then passes the request with the user object in it on to the controller in route that called it (or the next route middleware).
+
 1. Start by installing the npm packages with: `npm i passport passport-jwt jsonwebtoken`.
-1. Create a new file the `middleware` directory called `auth.js`.
-1. Add the following code to `auth.js`. This code configures Passport to get the id for us out of the request token, find the matching user in the database and then add that user to the request object. It exports a middleware called `requireToken` that we can add to our routes where we want them to be accessible only for authenticated users. The `createUserToken` uses the `jsonwebtoken` package to create and encrypt the tokens according to the standard, which we'll call from our signin route.
+1. Create a new file in the `middleware` directory called `auth.js`.
+1. Add the following code to `auth.js`. This code configures Passport to get the id for us out of the request token, find the matching user in the database and then add that user to the request object. It exports a middleware called `requireToken` that we can add to our routes where we want them to be accessible only for authenticated users. The `createUserToken` uses the `jsonwebtoken` package to create and encrypt the tokens according to the standard, which we'll call from our `/signin` route.
 
 ```js
 // Require the needed npm packages
@@ -1062,6 +1074,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
 // Create a secret to be used to encrypt/decrypt the token
+// This can be any string value you want -- even gibberish.
 const secret =
   process.env.JWT_SECRET || 'some string value only your app knows';
 
@@ -1147,7 +1160,7 @@ module.exports = {
 };
 ```
 
-### Add Signin Controller
+### Add the Signin Controller
 
 Now that we have a way to create a token for users when they login, we can add the logic to our `/signin` route.
 
@@ -1260,9 +1273,9 @@ router.delete('/:id', handleValidateId, requireToken, (req, res, next) => {
 
 Phew... that was a lot! All that's left now is to add the sign out feature.
 
-### Add Signout Controller
+### Add the Signout Controller
 
-JWT tokens automatically expire after a certain amount of time. In our case, the tokens are set to expire after 10 hours. The token cannot technically be invalidated during this time. However, we can send an empty token when the user clicks sign out, which our front end can interpret to mean that the user should be forced to login again. The act of logging in would create a new token with a new expiration time.
+JWT tokens automatically expire after a certain amount of time. In our case, the tokens are set to expire after 10 hours. The token cannot technically be **invalidated** during this time. However, we can send an empty token when the user clicks sign out, which our front end can interpret to mean that the user should be forced to login again. The act of logging in would create a new token with a new expiration time.
 
 1. Add the controller for the `/signout` route in the `controllers/users.js` as follows:
 
@@ -1279,3 +1292,98 @@ Technically, we're done. In the next section, we'll cover how to test the new ro
 Congrats for sticking with it this far! :champagne:
 
 [View Commit](../../commit/c151689)
+
+## Update Database Seed Method
+
+Now that we need each of our job documents to have an owner on them, lets update `db/models/seeds.js` to do that for us. We'll create a new function that takes an email as an argument from the command line when the file is run and finds the user in the database. Then, we'll loop over the json file in memory and add a new owner property with the userʼs id.
+
+To run the file from the command line, make sure you're in the root of your project directory and type: `node db/seeds.js email` and replace _email_ with an email address that matches one of the users in your database.
+
+1. Open `db/models/seeds.js`.
+1. Replace the file contents with the follow:
+
+```js
+const User = require('./models/user_models');
+const Job = require('./models/job_models');
+const seedData = require('./seeds.json');
+
+const getUser = async () => {
+  try {
+    if (!process.argv[2]) {
+      throw new Error(
+        'To seed the database provide an email address for an existing user'
+      );
+    }
+    const user = await User.findOne({ email: process.argv[2] });
+    if (!user) {
+      throw new Error('No matching user found!');
+    }
+    return user;
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+Job.deleteMany()
+  .then(getUser)
+  .then(user => {
+    const seedDataWithOwner = seedData.map(job => {
+      job.owner = user._id;
+      return job;
+    });
+    return Job.insertMany(seedDataWithOwner);
+  })
+  .then(console.log)
+  .then(console.error)
+  .finally(() => {
+    process.exit();
+  });
+```
+
+Test it out!
+
+## Setup Postman to Run Tests Sequentially
+
+Postman actually contains a ton of helpful features for running API tests. One feature that can be particularly helpful is the ability to set up an environment for your API that stores variables. Even better, we can automatically update the variables when we receive a response from the server. This is especially helpful when you're dealing with requests that are dependent upon data other requests. For example, we now have to set that long-ass token into the Authorization header of everyone of our POST, DELETE and PUT routes for our job resource, and since the token expires after some time, we’ll have to do it regularly.
+
+### Create Environment Variables
+
+1. Open Postman.
+1. Click on the gear icon (:gear:) on the top right side of the window just below the taskbar.
+1. When the Manage Environments modal appears, click the orange Add button at the bottom of the modal.
+1. Give your environment a descriptive name such as **Job Board API**.
+1. For the first variable, name it `url` and set the **initial value** and **current value** column to: `http://localhost:4000/api`.
+1. Add a second variable named `id` and set its initial value to an empty string (`''`).
+1. Add a third variable named `token` and also set its initial value to an empty string (`''`).
+1. Click the orange Add button on this screen and then close the modal by clicking the x in the upper right corner.
+1. In the environments dropdown selection list choose your new **Job Board API** environment.
+
+### Add Test Script to the Signin Request
+
+Now you can update your `/signin` request in Postman. Instead of manually having to copy and paste the token to each of our resource request in Postman, we can have Postman automatically run some code when the response to our signin request is received and set the token in the variable we created.
+
+1. Open the signin request you created earlier in Postman.
+1. In the toolbar below the request URL input field, click the **Tests** tab and add the following code:
+
+```js
+var data = pm.response.json();
+pm.environment.set('token', data.token);
+```
+
+Click the blue Send button and then click the eyeball icon next to the environments dropdown. You should now see the **token** variable is set. :tada:
+
+### Set the Authorization Header in the Jobs Post Request
+
+With the token stored in a variable, it’s easy for us to add it to our authenticated requests.
+
+1. Open the request you created for the post to the `/jobs` route.
+1. In the toolbar below the request URL input field, click the **Headers** tab.
+1. Add a header with `Authorization` set for the key and `{{token}}` set for the value.
+1. Back in the toolbar, click the **Tests** tab and add the following code:
+
+```js
+var data = pm.response.json();
+pm.environment.set('id', data._id);
+```
+
+Make sure youʼve still got JSON data set in the **Body** tab and click the blue Send button. Assuming that all went well, you should see the newly created job in the response window.
