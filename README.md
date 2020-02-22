@@ -1378,7 +1378,7 @@ With the token stored in a variable, it’s easy for us to add it to our authent
 
 1. Open the request you created for the post to the `/jobs` route.
 1. In the toolbar below the request URL input field, click the **Headers** tab.
-1. Add a header with `Authorization` set for the key and `{{token}}` set for the value.
+1. Add a header with `Authorization` set for the key and `Bearer {{token}}` set for the value.
 1. Back in the toolbar, click the **Tests** tab and add the following code:
 
 ```js
@@ -1386,4 +1386,35 @@ var data = pm.response.json();
 pm.environment.set('id', data._id);
 ```
 
-Make sure youʼve still got JSON data set in the **Body** tab and click the blue Send button. Assuming that all went well, you should see the newly created job in the response window.
+Make sure youʼve still got JSON data set in the **Body** tab and click the blue Send button. Assuming that all went well, you should see the newly created job in the response window. You'll also have an id for the newly created job that you can easily use in your DELETE and PUT requests by changing the url on the requests to: `{{url}}/jobs/{{id}}`... How awesome is that!
+
+## Handle Authentication in React
+
+In terms of making the Fetch or Axios requests to the API in React, you'll now have to add the `Authorization` header to authenticated requests, such as:
+
+```js
+axios({
+  url: `${APIURL}/jobs`
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${props.token}`
+  },
+  data: job
+});
+
+/*** ALTERNATIVELY USING FETCH ***/
+
+fetch(`${APIURL}/jobs`, {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${props.token}`
+  },
+  body: JSON.stringify(job)
+});
+```
+
+One approach to handling the token is to use React's built in Context API to store the value when it is returned after the user logs in. [Storing the user and accessing via useContext Hook](https://www.youtube.com/watch?v=lhMKvyLRWo0) is easier than passing around the token via props and eliminates prop drilling entirely.
+
+Alternatively, you can create state to hold your user in the App.js, along with a method to set the user state and pass that as a prop to your signin form's `handleSubmit` method. When the AJAX call to your server is successful and you get the token back from the API, you can call the method that sets the token in state in App. Now you can pass the token to all of the components that need it as props.
+
+There are also third party state management tools that could be used to store the token. They range from very basic ([`react-hooks-global-state`](https://www.npmjs.com/package/use-global-state)) to complex ([Redux](https://redux.js.org/)).
