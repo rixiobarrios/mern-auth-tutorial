@@ -638,7 +638,7 @@ const handleValidationErrors = (err, req, res, next) => {
   if (err.name.match(/Valid/) || err.name === 'MongoError') {
     throw new BadParamsError();
   } else {
-    // This the error-handling middleware will be called after
+    // This is the error-handling middleware will be called after
     // all controllers run, so we need to make sure that we pass
     // all of the errors up to this point on to the next
     // error handler in the chain!
@@ -1297,7 +1297,7 @@ Congrats for sticking with it this far! :champagne:
 
 Now that we need each of our job documents to have an owner on them, lets update `db/models/seeds.js` to do that for us. We'll create a new function that takes an email as an argument from the command line when the file is run and finds the user in the database. Then, we'll loop over the json file in memory and add a new owner property with the userʼs id.
 
-To run the file from the command line, make sure you're in the root of your project directory and type: `node db/seeds.js email` and replace _email_ with an email address that matches one of the users in your database.
+To run the file from the command line, make sure you're in the root of your project directory and type: `node db/seeds.js em@il` and replace _em@il_ with an email address that matches one of the users in your database.
 
 1. Open `db/models/seeds.js`.
 1. Replace the file contents with the follow:
@@ -1418,3 +1418,7 @@ One approach to handling the token is to use React's built in Context API to sto
 Alternatively, you can create state to hold your user in the App.js, along with a method to set the user state and pass that as a prop to your signin form's `handleSubmit` method. When the AJAX call to your server is successful and you get the token back from the API, you can call the method that sets the token in state in App. Now you can pass the token to all of the components that need it as props.
 
 There are also third party state management tools that could be used to store the token. They range from very basic ([`react-hooks-global-state`](https://www.npmjs.com/package/use-global-state)) to complex ([Redux](https://redux.js.org/)).
+
+## Test Authenticated Routes
+
+To write tests for authenticated routes, you'll need to use the [before or beforeEach hooks](https://mochajs.org/#hooks) in Mocha to generate a user token. You may find that using the async/await syntax is more straightforward here than using promise chains, but both will work. You can also use superagent as described in this [article](https://codeburst.io/authenticated-testing-with-mocha-and-chai-7277c47020b7).
